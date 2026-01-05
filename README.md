@@ -1,127 +1,156 @@
-# Real-Time Incident Intelligence Platform
 
-## Overview:
+Real-Time Incident Intelligence Platform
 
-    1. This project is a backend service designed to ingest, process, and analyze system events in real time. It enables engineering and operations teams to detect failures, anomalies, and abnormal behavior across distributed systems before they escalate into incidents.
-    2. The system focuses on reliability, scalability, and extensibility, following patterns commonly used in production-grade monitoring and alerting platforms.
+A backend service that ingests operational events via REST APIs, streams them through Kafka, and persists them to PostgreSQL for further analysis and alerting workflows.
 
-## Project Status:
+This project demonstrates real-world patterns used in incident monitoring, observability, and event-driven backend systems.
 
-    This project is actively evolving, with ongoing improvements and feature additions.
+## Project status
 
-### Key Use Cases:
+- Active development
+- Core event ingestion pipeline (API → Kafka → Consumer → DB) is implemented and stable
 
-    ~ Centralized ingestion of application and system events
-    ~ Real-time detection of abnormal behavior (error spikes, latency issues)
-    ~ Event correlation and enrichment
-    ~ Alert generation for operational teams
-    ~ Foundation for dashboards and alerting pipelines
-    ~ This type of system is commonly used by **SRE**, **DevOps**, and **Platform teams**.
+## Key use cases
 
-## Technology Stack
+- Centralized ingestion of application and system events
+- Foundation for real-time anomaly detection (error spikes, latency issues)
+- Event enrichment and correlation
+- Operational visibility for SRE, DevOps, and Platform teams
 
-### Backend
+## Technology stack
 
-    - Java 17
-    - Spring Boot
-    - Spring Data JPA
-    - Hibernate ORM
+- Java 17
+- Spring Boot
+- Spring Data JPA
+- Hibernate ORM
+- PostgreSQL (event persistence using JSONB)
+- Apache Kafka
+- Redis (planned: counters / rate-limiting)
+- Docker & Docker Compose
 
-### Data & Messaging
+## Architecture overview
 
-    - PostgreSQL (event persistence)
-    - Apache Kafka (event streaming)
-    - Redis (rate limiting / counters)
+Client / Service → REST API → Kafka Topic → Kafka Consumer → PostgreSQL
 
-### Infrastructure
+Flow
 
-    - Docker & Docker Compose
-    - REST APIs
-    - JSON-based messaging
+- Events are received via REST API
+- Events are published asynchronously to Kafka
+- Kafka consumers process and persist events
+- Stored data becomes the basis for alerting and dashboards
 
-## Architecture Overview
+## API contract
 
-Client / Service
-     |
-     v
-[ REST API ]
-     |
-     v
-[ Event Ingestion Layer ]
-     |
-     v
-[ Kafka Topic ]
-     |
-     v
-[ Event Processor ]
-     |
-     v
-[ PostgreSQL + Alerts ]
+POST /api/events
 
-    1. Events are ingested through REST APIs.
-    2. Data is validated and published to Kafka.
-    3. Consumers process, enrich, and persist events.
-    4. Downstream systems (alerts, dashboards) react in near real time.
+Request example
 
-### Core Features:
-
-    - Event ingestion API for structured system events
-    - Kafka-based event pipeline for scalability and decoupling
-    - JSON-based event payloads with flexible schemas
-    - PostgreSQL storage using JSONB
-    - Pluggable alerting logic (thresholds, patterns, severity)
-    - Clean layered architecture (Controller → Service → Repository)
-
-## Sample Event Payload
-
+```json
 {
-"serviceName": "payment-service",
-"eventType": "ERROR",
-"severity": "HIGH",
-"message": "Timeout while charging card",
-"metadata": { "latencyMs": 2300 }
+	"serviceName": "payment-service",
+	"eventType": "ERROR",
+	"severity": "HIGH",
+	"message": "Timeout while charging card",
+	"metadata": {
+		"latencyMs": 2300
+	}
 }
+```
 
-## Running the Application
+Response example
 
-    ./mvnw spring-boot:run
+```json
+{ "status": "QUEUED" }
+```
 
-## The service starts on:
+HTTP Status: 202 Accepted — the event is queued and processed asynchronously.
 
-    http://localhost:8080
+Quick curl example
 
-### Configuration:
+```bash
+curl -X POST http://localhost:8080/api/events \
+	-H "Content-Type: application/json" \
+	-d '{"serviceName":"payment-service","eventType":"ERROR","severity":"HIGH","message":"Timeout while charging card","metadata":{"latencyMs":2300}}'
+```
 
-    This application uses environment variables for sensitive configuration.
+## Running the application locally
 
-Required variables:
+Prerequisites
 
-- `DB_USERNAME`
-- `DB_PASSWORD`
+- Java 17
+- Docker & Docker Compose
 
-Database schema is managed automatically by Hibernate.
+Step 1 — Set database credentials
 
-## API Endpoint
+This application does not ship with hardcoded database credentials. Before running the service, set your PostgreSQL credentials as environment variables in your terminal session:
 
-    POST /api/events
-        - Accepts structured event data and stores it for further processing.
+```bash
+export DB_USERNAME=your_db_username
+export DB_PASSWORD=your_db_password
+```
 
-## Design Highlights:
+Step 2 — Start PostgreSQL + Kafka
 
-    ~ Clean separation of concerns (Controller / Service / Repository)
-    ~ JSON-based extensible event model
-    ~ Production-oriented error handling
-    ~ Ready for Kafka-based async processing
-    ~ Built with scalability and observability in mind
+From the project root (where `docker-compose.yml` exists):
 
-### Future Enhancements:
+```bash
+docker compose up -d
+```
 
-    - Rule-based alert engine
-    - WebSocket-based live dashboard
-    - Distributed tracing (OpenTelemetry)
-    - Alert routing (Slack, Email, PagerDuty)
-    - Event replay and analytics
+This starts:
 
-## Author- Ankith Bevara
+- PostgreSQL on localhost:5432
+- Kafka on localhost:9092
+- Zookeeper (used by Kafka)
 
-    Built as a backend-focused system design and implementation project to demonstrate real-world engineering practices in distributed systems and event-driven architectures.
+Step 3 — Run the Spring Boot service
+
+```bash
+./mvnw spring-boot:run
+```
+
+Application starts on: http://localhost:8080
+
+Step 4 — Test the endpoint
+
+Send a POST (see curl example above) and expect a 202 Accepted response. Check application logs to see Kafka producer/consumer activity and verify data persisted to PostgreSQL.
+
+## Data model
+
+Events are stored in PostgreSQL with flexible JSON metadata:
+
+- Structured columns for filtering (serviceName, eventType, severity)
+- JSONB column for extensible metadata (latency, traceId, region, etc.)
+
+Schema is managed automatically by Hibernate during development.
+
+## Project structure
+
+controller/   → REST endpoints
+dto/          → API request models
+kafka/        → Producer, consumer, topic definitions
+entity/       → JPA entities
+repository/   → Database access layer
+service/      → Business logic
+util/         → Utilities (e.g., JSON mapping)
+
+## Design highlights
+
+- Asynchronous ingestion using Kafka
+- Clear separation of concerns (API / messaging / persistence)
+- Consumer offset management enables message replay and recovery
+- Designed for extensibility (alerting, dashboards, analytics)
+
+## Planned enhancements
+
+- Rule-based alert engine (e.g., “5 errors in 30s”)
+- Dead-letter topic (DLQ) and retry strategy
+- Alert deduplication and severity scoring
+- WebSocket-based live dashboard
+- Distributed tracing (OpenTelemetry)
+- Alert routing (Slack, Email, Webhooks)
+
+## Author
+
+Ankith Bevara
+```

@@ -27,7 +27,7 @@ public class EventService {
                 .severity(request.getSeverity())
                 .message(request.getMessage())
                 .metadata(request.getMetadata())
-                .occurredAt(request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now()) //If client sends timeStampwe can use it, else uses system time.
+                .occurredAt(request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now()) //If client sends timeStamp we can use it, else uses system time.
                 .ingestedAt(Instant.now()) //to record when system received this event. Event if the event happened earlier.
                 .build();
 

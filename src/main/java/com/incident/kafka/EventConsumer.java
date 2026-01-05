@@ -1,0 +1,75 @@
+package com.incident.kafka;
+
+import tools.jackson.databind.ObjectMapper;
+import com.incident.dto.EventRequest;
+import com.incident.entity.Event;
+import com.incident.repository.EventRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+
+@Component
+@RequiredArgsConstructor
+public class EventConsumer {
+
+    private final ObjectMapper objectMapper;
+    private final EventRepository eventRepository;
+
+    /*
+        Without Lombok-  @RequiredArgsConstructor
+        public EventConsumer(ObjectMapper objectMapper, EventRepository eventRepository){
+            this.objectMapper = objectMapper;
+            this.eventRepository = eventRepository;
+        }
+    
+     */
+
+    @KafkaListener(topics = KafkaTopics.EVENTS_TOPIC) // It tells spring whenever a message is arrrived from this kafka topic, call this method (consume).
+    public void consume(String messageJson) {
+        try {
+            EventRequest request = objectMapper.readValue(messageJson, EventRequest.class); // JSON we got from producer and changing it to Java Object.
+            
+            // Building DB Entity
+            Event event = Event.builder()
+                    .serviceName(request.getServiceName())
+                    .eventType(request.getEventType())
+                    .severity(request.getSeverity())
+                    .message(request.getMessage())
+                    .metadata(request.getMetadata())
+                    .occurredAt(request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now())
+                    .ingestedAt(Instant.now())
+                    .build();
+
+            eventRepository.save(event);
+
+            System.out.println("Consumed message" + messageJson);
+
+        } catch (Exception e) {
+            // For now we just log/throw. Later we’ll add DLQ (dead-letter topic).
+            throw new RuntimeException("Failed to consume/process event message", e);
+        }
+    }
+}
+
+/*
+    // Again, without lombok we cannot use builder and required to write manually.
+    Event event = new Event();
+    event.setServiceName(request.getServiceName());
+    event.setEventType(request.getEventType());
+    event.setSeverity(request.getSeverity());
+    event.setMessage(request.getMessage());
+    event.setMetadata(request.getMetadata());
+        
+    // Set timestamps
+    if (request.getOccurredAt() != null) {
+        event.setOccurredAt(request.getOccurredAt());
+    } else {
+        event.setOccurredAt(Instant.now());
+    }
+
+    event.setIngestedAt(Instant.now());
+
+    return eventRepository.save(event);
+ */

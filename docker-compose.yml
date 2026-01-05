@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16 # Run PostgreSQL version 16
+    container_name: incident-postgres # Reference
+    environment:
+      POSTGRES_DB: eventdb
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes: # stores data
+      - incident_pgdata:/var/lib/postgresql/data
+
+  zookeeper: # It helps to manage cluster states like brokers, topics etc.
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: incident-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181 # port 2181 is the standard client port for Zookeeper
+      ZOOKEEPER_TICK_TIME: 2000 # tick-time is internal timing for coordination
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: incident-kafka
+    depends_on: # since Kafka needs Zookeeper up first, so depends_on ensures Zookeeper starts before Kafka
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1 # Kafka Servers ID.
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 # to connect to zookeeper container using dockers internal network.
+
+      # Listeners for inside docker + my system
+      # Why Listeners?
+      # kafka must know how other containers are connected to it inside docker network
+      # Kafka must know how our system is connected to it inside docker network
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092 # Advertise: Docker network tells kafka whick address to tell to clients
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT 
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # Multiple brokers can talk to each other using internal listener
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  
+volumes:
+  incident_pgdata:
