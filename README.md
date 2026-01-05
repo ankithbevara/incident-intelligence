@@ -1,5 +1,4 @@
-
-Real-Time Incident Intelligence Platform
+# Real-Time Incident Intelligence Platform
 
 A backend service that ingests operational events via REST APIs, streams them through Kafka, and persists them to PostgreSQL for further analysis and alerting workflows.
 
@@ -153,4 +152,3 @@ util/         → Utilities (e.g., JSON mapping)
 ## Author
 
 Ankith Bevara
-```
