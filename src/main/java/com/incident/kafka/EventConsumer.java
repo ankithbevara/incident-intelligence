@@ -30,7 +30,13 @@ public class EventConsumer {
     public void consume(String messageJson) {
         try {
             EventRequest request = objectMapper.readValue(messageJson, EventRequest.class); // JSON we got from producer and changing it to Java Object.
-            
+
+            //Interntional failure trigger to test retries + DLT
+            //If message contains "FAIL", throw exception
+            //if(request.getMessage() != null && request.getMessage().toUpperCase().contains("FAIL")){
+            //    throw new RuntimeException("Testing retries + DLT failures");
+            //}
+
             // Building DB Entity
             Event event = Event.builder()
                     .serviceName(request.getServiceName())
