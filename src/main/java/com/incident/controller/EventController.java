@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/events")
@@ -44,7 +45,10 @@ public class EventController {
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED) // 202 Accepted because async
     public Map<String, String> ingestEvent(@Valid @RequestBody EventRequest request) {
+        if(request.getEventId() == null || request.getEventId().isBlank()) { //Ensures API generates eventId if not provided
+            request.setEventId(UUID.randomUUID().toString());
+        }
         eventProducer.publishEvent(request);
-        return Map.of("status", "QUEUED"); //I am returning a Map, because it provides a quick way to return small JSON response without creating a new class. 
+        return Map.of("status", "QUEUED", "eventId", request.getEventId()); //I am returning a Map, because it provides a quick way to return small JSON response without creating a new class. 
     }
 }

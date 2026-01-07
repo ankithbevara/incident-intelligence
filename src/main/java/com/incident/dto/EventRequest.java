@@ -11,6 +11,8 @@ import tools.jackson.databind.JsonNode;
 public class EventRequest {
 
     //UUID, automatically created in backend, client cannot create manual UUIDs (security, tight coupling issues)
+    //@NotBlank   //idempotency key: each event has a stable identifier to avoid duplicates
+    private String eventId;
 
     @NotBlank
     private String serviceName;
@@ -38,7 +40,8 @@ public class EventRequest {
         }
 
         // Optional full constructor (useful in tests)
-        public EventRequest(String serviceName, String eventType, String severity, String message, String metadata, Instant occurredAt) {
+        public EventRequest(String eventId,String serviceName, String eventType, String severity, String message, String metadata, Instant occurredAt) {
+            this.eventId = eventId;
             this.serviceName = serviceName;
             this.eventType = eventType;
             this.severity = severity;
@@ -49,6 +52,14 @@ public class EventRequest {
         }
 
         // Getters & Setters
+
+        public String getEventId() {
+            return eventId;
+        }
+        
+        public void setEventId(String eventId) {
+            this.eventId = eventId;
+        }
 
         public String getServiceName() {
             return serviceName;

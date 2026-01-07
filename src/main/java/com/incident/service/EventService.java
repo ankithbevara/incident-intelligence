@@ -22,6 +22,7 @@ public class EventService {
 
     public Event createEvent(EventRequest request) { //Method to take data from DTO
         Event event = Event.builder()
+                .eventId(request.getEventId())
                 .serviceName(request.getServiceName())
                 .eventType(request.getEventType())
                 .severity(request.getSeverity())
@@ -38,6 +39,7 @@ public class EventService {
 /*
     // Again, without lombok we cannot use builder and required to write manually.
     Event event = new Event();
+    event.setEventId(request.getEventId());
     event.setServiceName(request.getServiceName());
     event.setEventType(request.getEventType());
     event.setSeverity(request.getSeverity());

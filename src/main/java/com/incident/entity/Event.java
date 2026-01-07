@@ -23,6 +23,9 @@ public class Event {
     @GeneratedValue
     private UUID id; //PRIMARY KEY, used to generate value automatically
 
+    @Column(nullable = false, unique = true)
+    private String eventId; //idempotency key to avoid duplicate events
+
     @Column(nullable = false)
     private String serviceName; 
 
@@ -50,7 +53,8 @@ public class Event {
         }
 
         // Optional full constructor (useful in tests)
-        public Event(String serviceName, String eventType, String severity, String message, String metadata, Instant occurredAt, Instant ingestedAt) {
+        public Event(String eventId, String serviceName, String eventType, String severity, String message, String metadata, Instant occurredAt, Instant ingestedAt) {
+            this.eventId = eventId;
             this.serviceName = serviceName;
             this.eventType = eventType;
             this.severity = severity;
@@ -68,6 +72,14 @@ public class Event {
 
         public void setId(UUID id) {
             this.id = id;
+        }
+
+        public String getEventId() {
+            return eventId;
+        }
+
+        public void setEventId(String eventId) {
+            this.eventId = eventId;
         }
 
         public String getServiceName() {
