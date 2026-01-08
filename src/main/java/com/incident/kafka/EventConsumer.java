@@ -4,6 +4,8 @@ import tools.jackson.databind.ObjectMapper;
 import com.incident.dto.EventRequest;
 import com.incident.entity.Event;
 import com.incident.repository.EventRepository;
+import com.incident.service.RuleEvaluatorService;
+
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -16,8 +18,9 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class EventConsumer {
 
-    private final ObjectMapper objectMapper;
-    private final EventRepository eventRepository;
+    private final ObjectMapper objectMapper; // Injecting ObjectMapper to convert JSON to Java Object.
+    private final EventRepository eventRepository; // Injecting EventRepository to save consumed events to DB.
+    private final RuleEvaluatorService ruleEvaluatorService; // Injecting RuleEvaluatorService to evaluate rules after event is saved.
 
     /*
         Without Lombok-  @RequiredArgsConstructor
@@ -51,8 +54,8 @@ public class EventConsumer {
             .ingestedAt(Instant.now())
             .build();
         try {
-                eventRepository.save(event);
-                System.out.println("Consumed message" + messageJson);
+                Event savedEvent = eventRepository.save(event); // Saving event to DB.
+                ruleEvaluatorService.evaluate(savedEvent); // After saving event, evaluate rules against this event.
         } catch (DataIntegrityViolationException e) {
             // For now we just log/throw. Later we’ll add DLQ (dead-letter topic).
             //throw new RuntimeException("Failed to consume/process event message", e);
